@@ -1,0 +1,22 @@
+name: PR Review (self)
+
+# pr-governance reviewing its own incoming PRs, using its own reusable
+# review.yml via a local workflow_call reference. Without this, PRs against
+# this repo have no way to satisfy the org ruleset's required approval --
+# review.yml only fires when CALLED from another repo, not on pr-governance
+# itself.
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+jobs:
+  review:
+    if: github.event.pull_request.draft == false
+    permissions:
+      contents: read
+      pull-requests: write
+      issues: write
+      id-token: write
+    uses: ./.github/workflows/review.yml
+    secrets: inherit
