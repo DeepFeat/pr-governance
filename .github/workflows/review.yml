@@ -4,7 +4,7 @@ name: PR Review (reusable)
 # (Approve or Request Changes), not just a comment. This is what lets branch
 # protection's "required approving review count" be satisfied without a
 # second human — documented explicitly as a compensating control for a
-# single-engineer team (see docs/COMPENSATING-CONTROL.md).
+# single-engineer team (see docs/change-management-compensating-control-policy.md).
 #
 # Call from a consuming repo like:
 #
