@@ -30,6 +30,12 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
+  # anthropics/claude-code-action@v1 requires this to fetch an OIDC token for
+  # its own auth -- unrelated to cloud-provider auth. Removing it fails with
+  # "Could not fetch an OIDC token" (confirmed empirically 2026-08-16).
+  # Don't remove this again without re-verifying against the action's actual
+  # requirements, not just general least-privilege instinct.
+  id-token: write
 
 concurrency:
   group: pr-governance-review-${{ github.event.pull_request.number }}
