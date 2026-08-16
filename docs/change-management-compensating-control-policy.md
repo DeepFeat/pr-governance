@@ -103,3 +103,14 @@ approving reviewer of record. This policy must be revised at that time.
   monthly-retro.yml
 - Organization-wide branch protection: GitHub organization ruleset
   "Org-Level SOC 2 Protect Main"
+
+## Responsibility
+
+It is the Chief Technology Officer's responsibility to ensure this policy
+is followed.
+
+## Version
+
+| Version | Date | Description | Author | Approved by |
+|---|---|---|---|---|
+| 1.0 | 2026-08-16 | Initial version | Chief Technology Officer | Chief Executive Officer |
