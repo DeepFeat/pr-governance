@@ -30,7 +30,6 @@ permissions:
   contents: read
   pull-requests: write
   issues: write
-  id-token: write
 
 concurrency:
   group: pr-governance-review-${{ github.event.pull_request.number }}
