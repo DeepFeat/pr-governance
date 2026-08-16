@@ -43,16 +43,15 @@ DeepFeat, Inc. implements a two-part compensating control, effective
 
 ### Automated review on every pull request
 
-An AI-based review system (Claude, via the DeepFeat/pr-governance shared
-workflow) reviews every pull request against the target repository's
-stated engineering conventions, checking for defects, security issues, and
-missing test coverage. The system submits a **formal GitHub pull request
-review** — an approval or a request for changes — not merely a comment.
+An AI-based review system reviews every pull request against the target
+repository's stated engineering conventions, checking for defects, security
+issues, and missing test coverage. The system submits a **formal GitHub
+pull request review** with an approval or a request for changes.
 
 This is a deliberate and disclosed design choice: an automated system is
 the entity satisfying the "approving review" requirement on most pull
-requests. It closes the *sampling* risk described above — every
-change has a recorded, non-author approver — but it does not substitute
+requests. It closes the *sampling* risk described above such that every
+change has a recorded, non-author approver, but it does not substitute
 for human judgment about business risk. That is the purpose of the monthly human review described next.
 
 This control is enforced technically, not only by convention: an
@@ -67,9 +66,9 @@ infrastructure are automatically labeled security-relevant. Once each
 month, a summary of all such changes merged in the preceding period is
 compiled and assigned to the Chief Executive Officer for review.
 
-This review is conducted at the level of business risk — confirming the
+This review is conducted at the level of business risk confirming the
 CEO understands what changed, why, and that it is consistent with
-DeepFeat, Inc.'s obligations to its customers — rather than a technical
+DeepFeat, Inc.'s obligations to its customers, rather than a technical
 correctness review, which is outside the CEO's domain of expertise. The
 CEO records sign-off in writing on each monthly review; that written
 record is retained as the audit evidence for this control.
@@ -94,15 +93,6 @@ Upon DeepFeat, Inc. hiring a second engineer, the automated review's
 approval should be downgraded from an approving reviewer to a required
 status check, and a genuine second engineer's review should become the
 approving reviewer of record. This policy must be revised at that time.
-
----
-
-## Cross-references
-
-- Implementation: DeepFeat/pr-governance — review.yml, auto-label.yml,
-  monthly-retro.yml
-- Organization-wide branch protection: GitHub organization ruleset
-  "Org-Level SOC 2 Protect Main"
 
 ## Responsibility
 
