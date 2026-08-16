@@ -1,0 +1,99 @@
+name: Security-Relevant Auto-Label (reusable)
+
+# Reusable workflow: labels a PR "security-relevant" if it touches any path
+# matching the sensitive-path patterns below. Feeds the monthly retrospective
+# (monthly-retro.yml), which pulls PRs by this exact label.
+#
+# Call from a consuming repo like:
+#
+#   on:
+#     pull_request:
+#       types: [opened, synchronize, reopened]
+#   jobs:
+#     label:
+#       uses: DeepFeat/pr-governance/.github/workflows/auto-label.yml@main
+#       secrets: inherit
+#       with:
+#         sensitive_paths: |
+#           apps/api/core/middleware/**
+#           apps/api/core/services/cognito*.py
+#           platform/terraform/**
+#           apps/api/config/settings/**
+
+on:
+  workflow_call:
+    inputs:
+      sensitive_paths:
+        type: string
+        required: true
+        description: "Newline-separated glob patterns. Any changed file matching one triggers the label."
+      label_name:
+        type: string
+        default: "security-relevant"
+
+permissions:
+  contents: read
+  pull-requests: write
+
+jobs:
+  label:
+    name: Auto-label
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Determine changed files
+        id: changed
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+        run: |
+          git diff --name-only "$BASE_SHA" "$HEAD_SHA" > /tmp/changed_files.txt
+          echo "count=$(wc -l < /tmp/changed_files.txt)" >> "$GITHUB_OUTPUT"
+
+      - name: Check against sensitive paths
+        id: match
+        env:
+          PATTERNS: ${{ inputs.sensitive_paths }}
+        run: |
+          python3 - <<'PYEOF'
+          import fnmatch
+          import os
+
+          patterns = [p.strip() for p in os.environ["PATTERNS"].splitlines() if p.strip()]
+          with open("/tmp/changed_files.txt") as f:
+              changed = [line.strip() for line in f if line.strip()]
+
+          matched = []
+          for f in changed:
+              for p in patterns:
+                  if fnmatch.fnmatch(f, p):
+                      matched.append((f, p))
+                      break
+
+          if matched:
+              print("MATCH found:")
+              for f, p in matched:
+                  print(f"  {f}  (matched pattern: {p})")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+                  out.write("is_sensitive=true\n")
+          else:
+              print("No sensitive-path matches.")
+              with open(os.environ["GITHUB_OUTPUT"], "a") as out:
+                  out.write("is_sensitive=false\n")
+          PYEOF
+
+      - name: Apply label
+        if: steps.match.outputs.is_sensitive == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          LABEL: ${{ inputs.label_name }}
+          REPO: ${{ github.repository }}
+        run: |
+          gh label create "$LABEL" --repo "$REPO" --color "B60205" \
+            --description "Touches auth, access control, data handling, or infra — reviewed in the monthly retrospective" \
+            2>/dev/null || true
+          gh pr edit "$PR_NUMBER" --repo "$REPO" --add-label "$LABEL"

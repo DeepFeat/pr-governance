@@ -1,0 +1,118 @@
+name: Monthly Security-Relevant Retrospective (reusable)
+
+# Reusable workflow: opens a GitHub Issue in the CALLING repo listing every
+# PR labeled "security-relevant" (see auto-label.yml) merged in the prior
+# ~30 days, for a non-technical reviewer (Matt) to read through and sign off
+# on by commenting + closing the issue. The closed issue IS the audit
+# evidence — dated, attributed, queryable.
+#
+# The schedule trigger must live in the CALLING repo (GitHub only fires
+# `schedule` events for workflows defined in the repo itself), so consuming
+# repos need a tiny wrapper like:
+#
+#   on:
+#     schedule:
+#       - cron: "0 15 1 * *"   # 1st of each month, 15:00 UTC
+#     workflow_dispatch: {}     # manual trigger for testing
+#   jobs:
+#     retro:
+#       uses: DeepFeat/pr-governance/.github/workflows/monthly-retro.yml@main
+#       secrets: inherit
+#       with:
+#         reviewer: matt-github-username
+#         label_name: security-relevant
+
+on:
+  workflow_call:
+    inputs:
+      reviewer:
+        type: string
+        required: true
+        description: "GitHub username to assign the retrospective issue to and @-mention."
+      label_name:
+        type: string
+        default: "security-relevant"
+      days_back:
+        type: number
+        default: 30
+
+permissions:
+  contents: read
+  issues: write
+  pull-requests: read
+
+jobs:
+  retro:
+    name: Open monthly retrospective
+    runs-on: ubuntu-latest
+    steps:
+      - name: Gather merged security-relevant PRs
+        id: gather
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          LABEL: ${{ inputs.label_name }}
+          DAYS_BACK: ${{ inputs.days_back }}
+        run: |
+          SINCE=$(date -u -d "-${DAYS_BACK} days" +%Y-%m-%d)
+          gh pr list --repo "$REPO" --label "$LABEL" --state merged \
+            --search "merged:>=$SINCE" \
+            --json number,title,url,author,mergedAt \
+            --jq 'sort_by(.mergedAt)' > /tmp/prs.json
+          echo "since=$SINCE" >> "$GITHUB_OUTPUT"
+          echo "count=$(python3 -c "import json; print(len(json.load(open('/tmp/prs.json'))))")" >> "$GITHUB_OUTPUT"
+
+      - name: Build issue body
+        id: body
+        env:
+          SINCE: ${{ steps.gather.outputs.since }}
+          REVIEWER: ${{ inputs.reviewer }}
+          LABEL: ${{ inputs.label_name }}
+        run: |
+          python3 - <<'PYEOF' > /tmp/issue_body.md
+          import json, os
+
+          with open('/tmp/prs.json') as f:
+              prs = json.load(f)
+
+          since = os.environ["SINCE"]
+          reviewer = os.environ["REVIEWER"]
+          label = os.environ["LABEL"]
+
+          print(f"@{reviewer} — monthly `{label}` retrospective, merged since {since}.")
+          print()
+          print("This is the compensating control for change management on a")
+          print("single-engineer team: these are the PRs that touched auth, access")
+          print("control, data handling, or infra since the last retrospective.")
+          print("Read through each one at a summary level (title + description is")
+          print("usually enough) and ask questions in a comment on THIS issue if")
+          print("anything looks off. Close this issue when you're satisfied — the")
+          print("closed issue is the audit record.")
+          print()
+
+          if not prs:
+              print(f"**No `{label}`-labeled PRs merged in this window.** Nothing to review — close this issue to record that.")
+          else:
+              print(f"**{len(prs)} PR(s) to review:**")
+              print()
+              for pr in prs:
+                  print(f"- [ ] [#{pr['number']}: {pr['title']}]({pr['url']}) — merged {pr['mergedAt']} by @{pr['author']['login']}")
+          PYEOF
+
+      - name: Open issue
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPO: ${{ github.repository }}
+          REVIEWER: ${{ inputs.reviewer }}
+          COUNT: ${{ steps.gather.outputs.count }}
+          SINCE: ${{ steps.gather.outputs.since }}
+        run: |
+          gh issue create --repo "$REPO" \
+            --title "Monthly security-relevant retrospective — since $SINCE ($COUNT PRs)" \
+            --body-file /tmp/issue_body.md \
+            --assignee "$REVIEWER" \
+            --label "monthly-retrospective" 2>&1 || \
+          gh issue create --repo "$REPO" \
+            --title "Monthly security-relevant retrospective — since $SINCE ($COUNT PRs)" \
+            --body-file /tmp/issue_body.md \
+            --assignee "$REVIEWER"
