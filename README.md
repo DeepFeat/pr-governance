@@ -1,10 +1,9 @@
 # pr-governance
 
 Reusable GitHub Actions workflows for PR-level change management controls,
-shared across DeepFeat, Inc. repositories. Built as the compensating control
-for `CC8.1` / `CC5.2` given a single-engineer team — see
-[`docs/COMPENSATING-CONTROL.md`](docs/COMPENSATING-CONTROL.md) for the full
-rationale.
+shared across DeepFeat, Inc. repositories. Implements the
+[Change Management Compensating Control Policy](docs/change-management-compensating-control-policy.md)
+for `CC8.1` / `CC5.2` given a single-engineer team.
 
 ## What's here
 
