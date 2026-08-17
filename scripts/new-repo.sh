@@ -36,6 +36,22 @@ fi
 echo "Creating DeepFeat/$NAME from repo-template..."
 gh repo create "DeepFeat/$NAME" --template DeepFeat/repo-template $VISIBILITY 2>&1
 
+# Template-repo file copy happens asynchronously after repo creation returns,
+# so the main branch (and therefore the protection endpoint) may 404 for a
+# few seconds -- confirmed empirically (2026-08-16, took ~5s). Poll instead
+# of racing it.
+echo "Waiting for main branch to exist..."
+for i in $(seq 1 15); do
+  if gh api "repos/DeepFeat/$NAME/branches/main" >/dev/null 2>&1; then
+    break
+  fi
+  if [ "$i" = 15 ]; then
+    echo "ERROR: main branch never appeared after 30s -- check the repo manually." >&2
+    exit 1
+  fi
+  sleep 2
+done
+
 echo "Applying classic branch protection..."
 cat > /tmp/new-repo-protection-$$.json <<'EOF'
 {
